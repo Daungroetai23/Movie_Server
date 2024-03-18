@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Status {
+  AVAILABLE // หมายถึงที่นั่งว่าง
+  BOOKED // หมายถึงที่นั่งถูกจองแล้ว
+  UNAVAILABLE // หมายถึงที่นั่งไม่สามารถจองได้
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  username   String?
+  phone      String
+  role       Role      @default(USER)
+  bookings   Booking[]
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+}
+
+model Movie {
+  id          Int        @id @default(autoincrement())
+  Img         String
+  name        String
+  genre       String
+  viewer_rate String
+  actors      String
+  director    String
+  time        Int
+  detail      String     @db.Text
+  showtimes   Showtime[]
+  Booking     Booking[]
+}
+
+model Showtime {
+  id            Int            @id @default(autoincrement())
+  date          DateTime       @db.Date
+  cinema        String
+  movie         Movie          @relation(fields: [movieId], references: [id])
+  movieId       Int
+  showtimeTimes ShowtimeTime[] // เพิ่ม field เวลาการฉายในแต่ละวัน
+  seats         Seat[]
+}
+
+model ShowtimeTime {
+  id         Int       @id @default(autoincrement())
+  showtime   Showtime  @relation(fields: [showtimeId], references: [id])
+  showtimeId Int
+  time       DateTime
+  bookings   Booking[]
+}
+
+model Seat {
+  id         Int       @id @default(autoincrement())
+  seatNumber String    
+  price      Float
+  showtime   Showtime  @relation(fields: [showtimeId], references: [id]) // ไม่ต้องมี field bookings ในโมเดลนี้
+  showtimeId Int
+  Booking    Booking[]
+}
+
+// กำหนดโมเดลสำหรับการจอง
+model Booking {
+  id             Int          @id @default(autoincrement())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  movie          Movie        @relation(fields: [movieId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  showtimeTime   ShowtimeTime @relation(fields: [showtimeTimeId], references: [id])
+  seat           Seat         @relation(fields: [seatId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId         Int
+  movieId        Int
+  showtimeTimeId Int
+  seatId         Int
+  quantity       Int
+  price          Float
+  status         Status
+  payment        Payment?
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bookingId   Int      @unique
+  amount      Float
+  paymentTime DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
